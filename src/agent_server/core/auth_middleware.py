@@ -104,20 +104,25 @@ class LangGraphAuthBackend(AuthenticationBackend):
     ) -> Optional[Tuple[AuthCredentials, BaseUser]]:
         """
         Authenticate request using LangGraph's auth system.
-        
+
         Args:
             conn: HTTP connection containing request headers
-            
+
         Returns:
             Tuple of (credentials, user) if authenticated, None otherwise
-            
+
         Raises:
             AuthenticationError: If authentication fails
         """
+        # Skip authentication for OPTIONS requests (CORS preflight)
+        # This allows CORS middleware to handle preflight requests properly
+        if conn.scope.get("method") == "OPTIONS":
+            return None
+
         if self.auth_instance is None:
             logger.warning("No auth instance available, skipping authentication")
             return None
-            
+
         if self.auth_instance._authenticate_handler is None:
             logger.warning("No authenticate handler configured, skipping authentication")
             return None

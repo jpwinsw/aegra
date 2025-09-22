@@ -1,5 +1,10 @@
 {
   "graphs": {
+    "orchestrator": "./deep_orchestrator/agent_wrapper.py:agent",
+    "orchestrator_v2": "./deep_orchestrator/agent_wrapper_v2.py:agent",
+    "crm": "./graphs/crm.py:graph",
+    "notes": "./graphs/notes.py:graph",
+    "research": "./deepagents_examples/research/research_agent.py:agent",
     "agent": "./graphs/react_agent/graph.py:graph",
     "agent_hitl": "./graphs/react_agent_hitl/graph.py:graph"
   }

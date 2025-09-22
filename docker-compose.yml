@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: aegra
     ports:
-      - "5432:5432"
+      - "5434:5432"  # Use different port to avoid conflict with main DB
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,11 +22,25 @@ services:
       context: .
       dockerfile: deployments/docker/Dockerfile
     ports:
-      - "8000:8000"
+      - "8020:8000"
     environment:
+      # Database - always use internal postgres container
       - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/aegra
-      - AUTH_TYPE=noop
-      - DEBUG=true
+      # Authentication
+      - AUTH_TYPE=${AUTH_TYPE:-custom}
+      - SECRET_KEY=${SECRET_KEY}  # Required: Must match BrainCore backend
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ALLOW_ANONYMOUS=${ALLOW_ANONYMOUS:-false}
+      # Server settings
+      - DEBUG=${DEBUG:-true}
+      - NODE_ENV=${NODE_ENV:-development}
+      # BrainCore API connection
+      - API_BASE_URL=${API_BASE_URL:-http://host.docker.internal:8010}
+      # Langfuse observability
+      - LANGFUSE_LOGGING=${LANGFUSE_LOGGING:-false}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-http://host.docker.internal:3001}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +51,21 @@ services:
       - ./auth.py:/app/auth.py:ro
       - ./.env:/app/.env:ro
       - ./alembic:/app/alembic:ro # for migrations
+      - ../lib/deepagents:/app/deepagents_root:ro # Mount deepagents root from submodule
+      - ../lib/deepagents/src/deepagents:/app/deepagents:ro # Mount deepagents module
+      - ../lib/deepagents/examples:/app/deepagents_examples:ro # Mount examples (used by orchestrator for research subagent)
+      - ../app/agents/deep_orchestrator:/app/deep_orchestrator:ro # Mount deep orchestrator agent
+      # NOTE: deep_orchestrator uses deepagents_examples/research as a subagent
+      # TODO: Once research agent is refactored, remove deepagents_examples mount
+      - ../app/agents/project_react:/app/project_react:ro # Mount project_react for tools
+      - ../app/agents/crm_agent:/app/app/agents/crm_agent:ro # Mount CRM agent
+      - ../app/agents/crm_react:/app/app/agents/crm_react:ro # Mount CRM React (for tools)
+      - ../app/agents/note_agent:/app/app/agents/note_agent:ro # Mount Notes agent
+      - ../app/shared:/app/app/shared:ro # Mount shared (tool registry, etc.)
+      - ../app/agents/shared:/app/backend/app/agents/shared:ro # Mount shared modules for API client
+      - ../app/core:/app/backend/app/core:ro # Mount core for config settings
+      - ../app/core:/app/app/core:ro # Mount core for persistence
+      - ../app/schemas:/app/backend/app/schemas:ro # Mount schemas for CRM tools
     command: >
       sh -c "
         echo 'Running database migrations...' &&
