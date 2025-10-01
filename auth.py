@@ -57,21 +57,21 @@ elif AUTH_TYPE == "custom":
     async def authenticate(headers: Dict[str, str]) -> Auth.types.MinimalUserDict:
         """
         Validate NextAuth JWT tokens.
-        
+
         This validates tokens from NextAuth.js used in the BrainCore frontend.
         """
         # Extract authorization header
         authorization = (
-            headers.get("authorization") or 
+            headers.get("authorization") or
             headers.get("Authorization") or
-            headers.get(b"authorization") or 
+            headers.get(b"authorization") or
             headers.get(b"Authorization")
         )
-        
+
         # Handle bytes headers
         if isinstance(authorization, bytes):
             authorization = authorization.decode('utf-8')
-        
+
         if not authorization:
             logger.warning("Missing Authorization header")
             # For development, allow anonymous access even in custom mode
